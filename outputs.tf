@@ -33,10 +33,9 @@ output "master_username" {
   value       = local.is_primary ? var.master_username : null
 }
 
-output "master_password" {
-  description = "Generated master password. Store in Secrets Manager in app-infra. Null on a secondary."
-  value       = local.is_primary ? random_password.master[0].result : null
-  sensitive   = true
+output "master_user_secret_arn" {
+  description = "Secrets Manager ARN of the Aurora-managed master password. The password itself is not available to Terraform. Null on a Global Database secondary."
+  value       = try(aws_rds_cluster.this.master_user_secret[0].secret_arn, null)
 }
 
 output "database_name" {

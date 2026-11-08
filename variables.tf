@@ -27,6 +27,12 @@ variable "master_username" {
   default     = "shopsphere_admin"
 }
 
+variable "master_user_secret_kms_key_id" {
+  description = "CMK that encrypts the Secrets Manager secret Aurora creates for the master password. Null uses the AWS-managed Secrets Manager key. Ignored on a Global Database secondary."
+  type        = string
+  default     = null
+}
+
 variable "vpc_id" {
   description = "VPC that holds the RDS subnets and this security group."
   type        = string

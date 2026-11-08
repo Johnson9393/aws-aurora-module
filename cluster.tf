@@ -1,12 +1,3 @@
-# Primary only. Secondary inherits the user from the global cluster.
-resource "random_password" "master" {
-  count = local.is_primary ? 1 : 0
-
-  length           = 32
-  special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
-}
-
 # Created only for preprod/prod primary. Non-prod leaves this off (regional HA only).
 # Secondary module call in us-west-1 does not create this; it attaches to the id we output.
 resource "aws_rds_global_cluster" "this" {
@@ -27,11 +18,12 @@ resource "aws_rds_cluster" "this" {
 
   global_cluster_identifier = var.create_global_cluster ? aws_rds_global_cluster.this[0].id : var.global_cluster_identifier
 
-  # Writer credentials exist only on the primary. Omitting them on the secondary
-  # is how Aurora Global Database decides which regional cluster is the writer.
-  database_name   = local.is_primary && !var.create_global_cluster ? var.database_name : null
-  master_username = local.is_primary ? var.master_username : null
-  master_password = local.is_primary ? random_password.master[0].result : null
+  # The primary owns the master user. Aurora writes the password to Secrets Manager.
+  # A Global Database secondary omits both, which is how Aurora picks the writer.
+  database_name                 = local.is_primary && !var.create_global_cluster ? var.database_name : null
+  master_username               = local.is_primary ? var.master_username : null
+  manage_master_user_password   = local.is_primary ? true : null
+  master_user_secret_kms_key_id = local.is_primary ? var.master_user_secret_kms_key_id : null
 
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = [aws_security_group.this.id]
